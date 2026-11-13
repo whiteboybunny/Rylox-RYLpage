@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Starfield Test Page</title>
+  <style>
+    :root {
+      --bg: #070914;
+      --text: #f4f6ff;
+      --muted: #aab2d5;
+      --accent: #8fa8ff;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      overflow: hidden;
+      color: var(--text);
+      background:
+        radial-gradient(ellipse at 50% 45%, #171d3b 0%, #0b0e20 42%, var(--bg) 78%);
+      font-family: Inter, system-ui, -apple-system, Segoe UI, sans-serif;
+    }
+
+    #starfield {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .center-content {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      display: grid;
+      place-content: center;
+      text-align: center;
+      padding: 24px;
+    }
+
+    .center-content h1 {
+      margin: 0;
+      font-size: clamp(2.4rem, 8vw, 6rem);
+      letter-spacing: -0.06em;
+      text-shadow: 0 0 28px rgba(143, 168, 255, 0.45);
+    }
+
+    .center-content p {
+      margin: 14px 0 0;
+      color: var(--muted);
+      font-size: clamp(0.95rem, 2vw, 1.15rem);
+    }
+
+    .corner-panel {
+      position: fixed;
+      z-index: 2;
+      padding: 14px;
+      border: 1px solid rgba(190, 202, 255, 0.18);
+      border-radius: 16px;
+      background: rgba(12, 16, 36, 0.72);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.28);
+      backdrop-filter: blur(14px);
+    }
+
+    .player {
+      left: 18px;
+      bottom: 18px;
+      width: min(310px, calc(100vw - 36px));
+    }
+
+    .panel-title {
+      display: block;
+      margin: 0 0 10px;
+      color: #dce3ff;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    audio {
+      display: block;
+      width: 100%;
+      height: 38px;
+    }
+
+    .file-picker {
+      display: block;
+      width: 100%;
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 0.78rem;
+    }
+
+    .redirect {
+      top: 18px;
+      right: 18px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .redirect a {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: white;
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 650;
+      padding: 9px 13px;
+      border-radius: 10px;
+      background: rgba(143, 168, 255, 0.16);
+      border: 1px solid rgba(143, 168, 255, 0.28);
+      transition: background 160ms ease, transform 160ms ease;
+    }
+
+    .redirect a:hover {
+      background: rgba(143, 168, 255, 0.28);
+      transform: translateY(-2px);
+    }
+
+    .redirect a:focus-visible,
+    input:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 3px;
+    }
+
+    @media (max-width: 520px) {
+      .player { left: 12px; bottom: 12px; }
+      .redirect { top: 12px; right: 12px; }
+      .corner-panel { padding: 11px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="starfield" aria-hidden="true"></canvas>
+
+  <main class="center-content">
+    <div>
+      <h1>Your Text Here</h1>
+      <p>A little starfield experiment.</p>
+    </div>
+  </main>
+
+  <section class="corner-panel player" aria-label="Media player">
+    <span class="panel-title">Media Player</span>
+    <audio id="audioPlayer" controls>
+      Your browser does not support the audio element.
+    </audio>
+    <label class="file-picker">
+      Choose an audio file
+      <input id="audioFile" type="file" accept="audio/*" />
+    </label>
+  </section>
+
+  <nav class="corner-panel redirect" aria-label="Redirect link">
+    <span class="panel-title" style="margin:0">Quick link</span>
+    <a href="https://www.youtube.com" target="_blank" rel="noopener noreferrer">
+      YouTube <span aria-hidden="true">↗</span>
+    </a>
+  </nav>
+
+  <script>
+    // Animated starfield — no libraries or external assets required.
+    (() => {
+      const canvas = document.getElementById("starfield");
+      const ctx = canvas.getContext("2d");
+      const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      let stars = [];
+      let width = 0;
+      let height = 0;
+      let animationId;
+
+      function resize() {
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        width = window.innerWidth;
+        height = window.innerHeight;
+        canvas.width = Math.floor(width * dpr);
+        canvas.height = Math.floor(height * dpr);
+        canvas.style.width = width + "px";
+        canvas.style.height = height + "px";
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        const count = Math.min(260, Math.floor((width * height) / 5200));
+        stars = Array.from({ length: count }, () => ({
+          x: Math.random() * width,
+          y: Math.random() * height,
+          radius: Math.random() * 1.5 + 0.25,
+          alpha: Math.random() * 0.65 + 0.2,
+          speed: Math.random() * 0.35 + 0.08,
+          phase: Math.random() * Math.PI * 2
+        }));
+      }
+
+      function draw(time = 0) {
+        ctx.clearRect(0, 0, width, height);
+
+        for (const star of stars) {
+          const twinkle = reducedMotion
+            ? 1
+            : 0.55 + Math.sin(time * 0.0015 + star.phase) * 0.35;
+
+          ctx.beginPath();
+          ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(225, 234, 255, ${star.alpha * twinkle})`;
+          ctx.shadowBlur = star.radius * 7;
+          ctx.shadowColor = "rgba(155, 180, 255, 0.8)";
+          ctx.fill();
+          ctx.shadowBlur = 0;
+
+          if (!reducedMotion) {
+            star.y += star.speed;
+            if (star.y > height + 2) {
+              star.y = -2;
+              star.x = Math.random() * width;
+            }
+          }
+        }
+
+        if (!reducedMotion) animationId = requestAnimationFrame(draw);
+      }
+
+      window.addEventListener("resize", resize);
+      resize();
+      draw();
+    })();
+
+    // Let the visitor play a local audio file without uploading it anywhere.
+    const audioFile = document.getElementById("audioFile");
+    const audioPlayer = document.getElementById("audioPlayer");
+    let currentObjectUrl = null;
+
+    audioFile.addEventListener("change", () => {
+      const file = audioFile.files && audioFile.files[0];
+      if (!file) return;
+
+      if (currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
+      currentObjectUrl = URL.createObjectURL(file);
+      audioPlayer.src = currentObjectUrl;
+      audioPlayer.load();
+    });
+
+    window.addEventListener("beforeunload", () => {
+      if (currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
+    });
+  </script>
+</body>
+</html>
